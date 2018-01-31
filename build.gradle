@@ -1,0 +1,116 @@
+group 'com.lhalcyon'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'war'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+//将src文件夹中的资源文件同时打包
+processResources {
+    from('src/main/java') {
+        include '**/*.xml'
+    }
+}
+
+
+configurations {
+    mybatisGenerator
+}
+
+// 读取config文件夹中对应的配置文件
+ext{
+    def prop = new Properties();
+    file("src/main/resources/config/mybatis/jdbc-mysql.properties")
+            .withInputStream {
+        prop.load(it)
+    }
+    file("src/main/resources/config/mybatis/gradle.properties")
+            .withInputStream {
+        prop.load(it)
+    }
+    prop.each {
+        project.extensions.add("$it.key",it.value);
+    }
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+
+    compile 'org.codehaus.groovy:groovy-all:2.3.11'
+    compile 'jstl:jstl:1.2'
+    compile 'org.springframework:spring-aop:4.2.4.RELEASE'
+    compile 'org.springframework:spring-context:4.2.4.RELEASE'
+    compile 'org.springframework:spring-beans:4.2.4.RELEASE'
+    compile 'org.springframework:spring-web:4.2.4.RELEASE'
+    compile 'org.springframework:spring-webmvc:4.2.4.RELEASE'
+    compile 'org.springframework:spring-tx:4.2.4.RELEASE'
+    compile 'org.springframework:spring-jdbc:4.2.4.RELEASE'
+    compile 'org.springframework:spring-test:4.2.4.RELEASE'
+    compile 'mysql:mysql-connector-java:5.1.38'
+    compile 'org.mybatis.generator:mybatis-generator-core:1.3.2'
+    compile 'org.mybatis:mybatis-spring:1.2.3'
+    compile 'org.mybatis:mybatis:3.3.0'
+    compile 'junit:junit:4.12'
+
+    // https://mvnrepository.com/artifact/commons-dbcp/commons-dbcp
+    compile group: 'commons-dbcp', name: 'commons-dbcp', version: '1.4'
+    // https://mvnrepository.com/artifact/org.aspectj/aspectjweaver
+    compile group: 'org.aspectj', name: 'aspectjweaver', version: '1.8.13'
+    // https://mvnrepository.com/artifact/log4j/log4j
+    compile group: 'log4j', name: 'log4j', version: '1.2.17'
+
+
+    // https://mvnrepository.com/artifact/com.alibaba/fastjson
+    compile group: 'com.alibaba', name: 'fastjson', version: '1.2.45'
+
+
+
+    mybatisGenerator 'org.mybatis.generator:mybatis-generator-core:1.3.2'
+    mybatisGenerator 'mysql:mysql-connector-java:5.1.38'
+
+
+}
+
+// 利用ant创建一个自动生成MyBatis目录文件的task
+task mybatisGenerate << {
+    ant.properties['targetProject'] = projectDir.path
+    ant.properties['jarDirection'] = project['jdbc.jarDirection']
+    ant.properties['driverClass'] = project['jdbc.driverClassName']
+    ant.properties['connectionURL'] = project['jdbc.url']
+    ant.properties['userId'] = project['jdbc.user']
+    ant.properties['password'] = project['jdbc.pass']
+    ant.properties['src_main_java'] = sourceSets.main.java.srcDirs[0].path
+    ant.properties['src_main_resources'] = sourceSets.main.resources.srcDirs[0].path
+    ant.properties['modelPackage'] = project['modelPackage']
+    ant.properties['mapperPackage'] = project['mapperPackage']
+    ant.properties['sqlMapperPackage'] = project['sqlMapperPackage']
+
+    ant.taskdef(
+            name: 'mbgenerator',
+            classname: 'org.mybatis.generator.ant.GeneratorAntTask',
+            classpath: configurations.mybatisGenerator.asPath
+    )
+
+    ant.mbgenerator(overwrite: true,
+            configfile: 'src/main/resources/config/mybatis/generatorConfig.xml',
+            verbose: true) {
+        propertyset {
+            propertyref(name: 'targetProject')
+            propertyref(name: 'jarDirection')
+            propertyref(name: 'userId')
+            propertyref(name: 'driverClass')
+            propertyref(name: 'connectionURL')
+            propertyref(name: 'password')
+            propertyref(name: 'src_main_java')
+            propertyref(name: 'src_main_resources')
+            propertyref(name: 'modelPackage')
+            propertyref(name: 'mapperPackage')
+            propertyref(name: 'sqlMapperPackage')
+        }
+    }
+}
